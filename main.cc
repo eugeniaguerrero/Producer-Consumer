@@ -10,106 +10,137 @@ void *consumer (void *id);
 
 int main (int argc, char **argv)
 {
-  int queue_size = argv[0];
-  int jobs_per_producer = argv[1];
-  int num_producers = argv[2];
-  int num_consumers = argv[3];
-  int consumer_job_counter = 0;
-  int producer_job_counter = 0;
-
-  // set up and initialise variables
-  pthread_t producerid;
-  pthread_t consumerid;
-  int parameter = 5;
-
-  // set up and initialise semaphores
-  sem_create(ITEM, 1);
-  sem_create(SPACE, 1);
-  sem_create(MUTEX, 1);
-  sem_init(ITEM, 1, 0);
-  sem_init(SPACE, 1, N);
-  sem_init(MUTEX, 1, 1);
-
-  // create a shared data structure
-  struct CircularQueue {
-    int start, end;
-    int size;
-	int *array;
-
-    CircularQueue(int queue_size){
-      start = end = -1;
-	  size = queue_size;
-	  array = new int[queue_size];
-    }
-
-	void addToQueue(int value);
-	int removeFromQueue();
-	void printQueue();
-
-  };
-  
-  // to print the elements of the queue
-  void CircularQueue::printQueue(){
-    if (start == -1){
-	  cout << "The queue is empty" << endl;
-	  break;
+	// check enough parameters are given.
+	if (argc < 5 || argc >= 6){
+		cerr << "Error: insufficient number of parameters provided. ";
+		cerr << "Number of parameters must be 5." << endl;
+		return -1;
 	}
-	cout << "The elements in the circular queue are: " << endl;
-	if (end >= start){
-	  for (int i = start; i <= end; i++){
-        cout << array[i];
-	  }
+	// check input parameters are of the correct format.
+	for (int i = 0; i < argc; i++){
+		if (i >= 1 && i <= 4){
+			int result = check_arg(argv[i]);
+			if (result == -1) {
+				cerr << "Error with the supplied parameters: ";
+				cerr << "non-numeric input at position " << i << "." << endl;
+				return -1;
+			}
+		}
 	}
-	else {
-	  for (int i = front; i < size; i++){
-        cout << array[i];
-	  }
-	  for (int i = 0; i <= rear; i++){
-        cout << array[i];
-	  }
-	}
-  }
+	// now that we have checked parameters are of correct number and format,
+	// initialise variables with parameter values.
+	int queue_size = check_arg(argv[1]);
+	int jobs_per_producer = check_arg(argv[2]);
+	int num_producers = check_arg(argv[3]);
+	int num_consumers = check_arg(argv[4]);
+	cout << "Queue size = " << queue_size << "; ";
+	cout << "jobs per producer = " << jobs_per_producer << "; ";
+	cout << "number of producers = " << num_producers << "; ";
+	cout << "number of consumers = " << num_consumers << "." << endl;
+
+
+	// set up and initialise semaphores
+	sem_create(ITEM, 1);
+	sem_create(SPACE, 1);
+	sem_create(MUTEX, 1);
+	sem_init(ITEM, 1, 0);
+	sem_init(SPACE, 1, queue_size);
+	sem_init(MUTEX, 1, 1);
+
+	// create a data structure
+	struct Queue {
+		int start, end;
+		int size;
+		int *array;
+
+		Queue(int queue_size){
+				start = end = -1;
+				size = queue_size;
+				array = new int[queue_size];
+				cout << "Hello from the Queue constructor" << endl;
+		}
+
+		void addToQueue(int job);
+		void remproducer_idoveFromQueue();
+		// void printQueue(){
+		// 	if (start == -1){
+		// 		cout << "The queue is empty" << endl;
+		// 		return;
+		// 	}
+		// 	cout << "The elements in the circular queue are: " << endl;
+		// 	if (end >= start){
+		// 		for (int i = start; i <= end; i++){
+		// 			cout << array[i];
+		// 		}
+		// 	}
+		// 	else {
+		// 		for (int i = start; i < size; i++){
+		// 			cout << array[i];
+		// 		}
+		// 		for (int i = 0; i <= end; i++){
+		// 			cout << array[i];
+		// 		}
+		// 	}
+		// }
+	};
 
   // initialise a queue that producers and consumers can access
-  CircularQueue queue(queue_size);
+  Queue circularQueue(queue_size);
 
-  // create the required producers and consumers
-  for (int i = 0; i < num_producers; i++){
-  	pthread_create (&producerid, NULL, producer, (void *) &parameter);
-  };
-  for (int i = 0; i < num_consumers; i++){
-	pthread_create (&consumerid, NULL, consumer, (void *) &parameter);
-  };
+	// create producer and consumer threads
+	pthread_t producerid;
+	pthread_t consumerid;
 
+  // creates the required producers
+	for (int i = 0; i < num_producers; i++){
+		int ret_producer;
+		int producer_id = i;
+
+		cout << "Creating producer " << i+1 << " in main" << endl;
+		ret_producer = pthread_create (&producerid, NULL, producer, (void *) &producer_id);
+
+		if (ret_producer){
+			printf("ERROR: return code from pthread_create() is %d\n", ret_producer);
+			exit(-1);
+		}
+  };
+	// creates the required consumers
+	for (int i = 0; i < num_consumers; i++){
+		int ret_consumer;
+		int consumer_id = i;
+
+		cout << "Creating consumer " << i+1 << " in main" << endl;
+		ret_consumer = pthread_create (&consumerid, NULL, consumer, (void *) &consumer_id);
+
+		if (ret_consumer){
+			printf("ERROR: return code from pthread_create() is %d\n", ret_consumer);
+			exit(-1);
+		}
+	};
+
+  // Process clean-up
   // wait for threads to terminate, then clean up resources used by the thread
   pthread_join (producerid, NULL);
   pthread_join (consumerid, NULL);
+
   return 0;
 }
 
-void *producer(void *parameter)
+void *producer(void *producer_id)
 {
-  // define method to exit from thread
-  void pthread_exit(void *retval);
+	int *param = (int *) producer_id;
+	cout << "Producer(" << *param << "): " << endl;
 
-  while(){
-  	int *param = (int *) parameter;
-  	cout << "Parameter = " << *param << endl;
-
-	}
+	// Queue jobQueue(jobs_per_producer);
   pthread_exit(0);
 }
 
-void *consumer (void *id)
+void *consumer (void *consumer_id)
 {
-  void pthread_exit(void *retval);
+	int *param = (int *) consumer_id;
+	cout << "Consumer(" << *param << "): "<< endl;
 
-	// TODO
-  int *id = (int *) id;
-
-  cout << "Consumer(" << consumerid << "): Job id " << *id << endl;
 
   pthread_exit (0);
 
 }
-
