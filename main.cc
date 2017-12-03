@@ -46,7 +46,6 @@ int main (int argc, char **argv)
 	sem_init(ITEM, 1, 0);
 	sem_init(SPACE, 1, queue_size);
 	sem_init(MUTEX, 1, 1);
-
 	// create a data structure
 	struct Queue {
 		int start, end;
@@ -61,7 +60,7 @@ int main (int argc, char **argv)
 		}
 
 		void addToQueue(int job);
-		void remproducer_idoveFromQueue();
+		void removeFromQueue();
 		// void printQueue(){
 		// 	if (start == -1){
 		// 		cout << "The queue is empty" << endl;
@@ -118,8 +117,7 @@ int main (int argc, char **argv)
 		}
 	};
 
-  // Process clean-up
-  // wait for threads to terminate, then clean up resources used by the thread
+  // Process clean-up: wait for threads to terminate & clean up resources
   pthread_join (producerid, NULL);
   pthread_join (consumerid, NULL);
 
@@ -130,8 +128,12 @@ void *producer(void *producer_id)
 {
 	int *param = (int *) producer_id;
 	cout << "Producer(" << *param << "): " << endl;
+	// sem_wait(SPACE);
+	// sem_wait(MUTEX);
+	// // addToQueue(jobId);
+	// sem_signal(MUTEX);
+	// sem_signal(ITEM);
 
-	// Queue jobQueue(jobs_per_producer);
   pthread_exit(0);
 }
 
@@ -139,7 +141,11 @@ void *consumer (void *consumer_id)
 {
 	int *param = (int *) consumer_id;
 	cout << "Consumer(" << *param << "): "<< endl;
-
+	// sem_wait(ITEM);
+	// sem_wait(MUTEX);
+	// // removeFromQueue(jobId);
+	// sem_signal(MUTEX);
+	// sem_signal(SPACE);
 
   pthread_exit (0);
 
