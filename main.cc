@@ -10,6 +10,9 @@ void *consumer (void *id);
 
 int main (int argc, char **argv)
 {
+/*                        
+					Validate and initialise input parameters                             
+*/
 	// check enough parameters are given.
 	if (argc < 5 || argc >= 6){
 		cerr << "Error: insufficient number of parameters provided. ";
@@ -39,13 +42,57 @@ int main (int argc, char **argv)
 	cout << "number of consumers = " << num_consumers << "." << endl;
 
 
+/*                     
+                   Create consumers and producers threads and variables                          
+*/   
+    // create producer and consumer thread ids, to be set by pthread_create()
+    pthread_t producerid;
+    pthread_t consumerid;
+
+
+    // create the required producers
+	for (int i = 0; i < num_producers; i++){
+		int return_producer;
+		int parameter = i;
+
+		cout << "Creating producer " << i+1 << " in main" << endl;
+		return_producer = pthread_create (&producerid, NULL, producer, (void *) &parameter);
+
+		if (return_producer){
+			printf("ERROR: return code from pthread_create() is %d\n", return_producer);
+			exit(-1);
+		};
+    };
+	
+	// create the required consumers
+	for (int i = 0; i < num_consumers; i++){
+		int return_consumer;
+		int id = i;
+
+		cout << "Creating consumer " << i+1 << " in main" << endl;
+		return_consumer = pthread_create (&consumerid, NULL, consumer, (void *) &id);
+
+		if (return_consumer){
+			printf("ERROR: return code from pthread_create() is %d\n", return_consumer);
+			exit(-1);
+		};
+	};
+	
 	// set up and initialise semaphores
-	sem_create(ITEM, 1);
-	sem_create(SPACE, 1);
-	sem_create(MUTEX, 1);
-	sem_init(ITEM, 1, 0);
-	sem_init(SPACE, 1, queue_size);
-	sem_init(MUTEX, 1, 1);
+	int semid = sem_create(SEM, 3);
+	// check semaphore is initialised without errors
+	if(sem_init(SEM, 1, 1) == -1){
+	  printf("sem_init: failed: %s\n",strerror(errno));
+	};
+
+	sem_init(semid, ITEM, 0); // Item semaphore 
+	sem_init(semid, SPACE, queue_size); // Space semaphore
+	sem_init(semid, MUTEX, 1); // Mutex semaphore
+
+
+/*
+					Create a circular queue and its associated methods
+*/
 	// create a data structure
 	struct Queue {
 		int start, end;
@@ -56,7 +103,6 @@ int main (int argc, char **argv)
 				start = end = -1;
 				size = queue_size;
 				array = new int[queue_size];
-				cout << "Hello from the Queue constructor" << endl;
 		}
 
 		void addToQueue(int job);
@@ -86,36 +132,6 @@ int main (int argc, char **argv)
   // initialise a queue that producers and consumers can access
   Queue circularQueue(queue_size);
 
-	// create producer and consumer threads
-	pthread_t producerid;
-	pthread_t consumerid;
-
-  // creates the required producers
-	for (int i = 0; i < num_producers; i++){
-		int ret_producer;
-		int producer_id = i;
-
-		cout << "Creating producer " << i+1 << " in main" << endl;
-		ret_producer = pthread_create (&producerid, NULL, producer, (void *) &producer_id);
-
-		if (ret_producer){
-			printf("ERROR: return code from pthread_create() is %d\n", ret_producer);
-			exit(-1);
-		}
-  };
-	// creates the required consumers
-	for (int i = 0; i < num_consumers; i++){
-		int ret_consumer;
-		int consumer_id = i;
-
-		cout << "Creating consumer " << i+1 << " in main" << endl;
-		ret_consumer = pthread_create (&consumerid, NULL, consumer, (void *) &consumer_id);
-
-		if (ret_consumer){
-			printf("ERROR: return code from pthread_create() is %d\n", ret_consumer);
-			exit(-1);
-		}
-	};
 
   // Process clean-up: wait for threads to terminate & clean up resources
   pthread_join (producerid, NULL);

@@ -21,9 +21,7 @@
 # include <iostream>
 using namespace std;
 
-# define ITEM 0x60
-# define SPACE 0x80
-# define MUTEX 0x90
+# define SEM 0x60
 
 union semun {
     int val;               /* used for SETVAL only */

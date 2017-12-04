@@ -38,7 +38,7 @@ int sem_init (int id, int num, int value)
   union semun semctl_arg;
   semctl_arg.val = value;
   if (semctl (id, num, SETVAL, semctl_arg) < 0)
-    return -1;
+	return -1;
   return 0;
 }
 
