@@ -41,24 +41,22 @@ int main (int argc, char **argv)
 	cout << "number of producers = " << num_producers << "; ";
 	cout << "number of consumers = " << num_consumers << "." << endl;
 
-
 /*                     
                    Create consumers and producers threads and variables                          
 */   
     // create producer and consumer thread ids, to be set by pthread_create()
-    pthread_t producerid;
-    pthread_t consumerid;
+    pthread_t producerid[num_producers];
+    pthread_t consumerid[num_consumers];
 
 
     // create the required producers
 	for (int i = 0; i < num_producers; i++){
 		int return_producer;
-		int parameter = i;
 
 		cout << "Creating producer " << i+1 << " in main" << endl;
-		return_producer = pthread_create (&producerid, NULL, producer, (void *) &parameter);
+		return_producer = pthread_create ((&producerid)[i], NULL, producer, (void *) &jobs_per_producer);
 
-		if (return_producer){
+		if (return_producer != 0){
 			printf("ERROR: return code from pthread_create() is %d\n", return_producer);
 			exit(-1);
 		};
@@ -67,12 +65,11 @@ int main (int argc, char **argv)
 	// create the required consumers
 	for (int i = 0; i < num_consumers; i++){
 		int return_consumer;
-		int id = i;
 
 		cout << "Creating consumer " << i+1 << " in main" << endl;
-		return_consumer = pthread_create (&consumerid, NULL, consumer, (void *) &id);
+		return_consumer = pthread_create (&consumerid, NULL, consumer, (void *) (&consumerid)[i]);
 
-		if (return_consumer){
+		if (return_consumer != 0){
 			printf("ERROR: return code from pthread_create() is %d\n", return_consumer);
 			exit(-1);
 		};
@@ -85,8 +82,8 @@ int main (int argc, char **argv)
 	  printf("sem_init: failed: %s\n",strerror(errno));
 	};
 
-	sem_init(semid, ITEM, 0); // Item semaphore 
-	sem_init(semid, SPACE, queue_size); // Space semaphore
+	sem_init(semid, EMPTY, 0); // semaphore for consumer 
+	sem_init(semid, FULL, queue_size); // semaphore for producer
 	sem_init(semid, MUTEX, 1); // Mutex semaphore
 
 
@@ -99,14 +96,13 @@ int main (int argc, char **argv)
 		int size;
 		int *array;
 
-		Queue(int queue_size){
+		Queue(int size){
 				start = end = -1;
-				size = queue_size;
-				array = new int[queue_size];
+				array = new int[size];
 		}
 
-		void addToQueue(int job);
-		void removeFromQueue();
+		void add(Job job);
+		void pop();
 		// void printQueue(){
 		// 	if (start == -1){
 		// 		cout << "The queue is empty" << endl;
@@ -128,6 +124,11 @@ int main (int argc, char **argv)
 		// 	}
 		// }
 	};
+	
+	struct Job {
+		int id;
+		int duration;
+	}
 
   // initialise a queue that producers and consumers can access
   Queue circularQueue(queue_size);
@@ -140,22 +141,26 @@ int main (int argc, char **argv)
   return 0;
 }
 
-void *producer(void *producer_id)
+void *producer(int jobs_per_producer)
 {
 	int *param = (int *) producer_id;
 	cout << "Producer(" << *param << "): " << endl;
+	for (int i = 0; i < jobs_per_producer ; i++){
+		// add jobs to Job jobs array
+	}
 	// sem_wait(SPACE);
 	// sem_wait(MUTEX);
-	// // addToQueue(jobId);
+	// // add(jobId);
+	//
 	// sem_signal(MUTEX);
 	// sem_signal(ITEM);
 
   pthread_exit(0);
 }
 
-void *consumer (void *consumer_id)
+void *consumer (void *id)
 {
-	int *param = (int *) consumer_id;
+	int *param = (int *) id;
 	cout << "Consumer(" << *param << "): "<< endl;
 	// sem_wait(ITEM);
 	// sem_wait(MUTEX);
